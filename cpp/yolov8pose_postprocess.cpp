@@ -140,13 +140,13 @@ std::vector<Decodings> nms(std::vector<Decodings> &decodings, const float iou_th
 }
 
 
-float dequantize_value(uint8_t val, float32_t qp_scale, float32_t qp_zp){
+float dequantize_value(uint16_t val, float32_t qp_scale, float32_t qp_zp){
     return (float(val) - qp_zp) * qp_scale;
 }
 
 
 void dequantize_box_values(xt::xarray<float>& dequantized_outputs, int index,
-                        xt::xarray<uint8_t>& quantized_outputs,
+                        xt::xarray<uint16_t>& quantized_outputs,
                         size_t dim1, size_t dim2, float32_t qp_scale, float32_t qp_zp){
     for (size_t i = 0; i < dim1; i++){
         for (size_t j = 0; j < dim2; j++){
@@ -212,7 +212,7 @@ std::vector<Decodings> decode_boxes_and_keypoints(std::vector<HailoTensorPtr> ra
         auto output_b = common::get_xtensor(raw_boxes_outputs[i]);
         int num_proposals = output_b.shape(0) * output_b.shape(1);
         auto output_boxes = xt::view(output_b, xt::all(), xt::all(), xt::all());
-        xt::xarray<uint8_t> quantized_boxes = xt::reshape_view(output_boxes, {num_proposals, 4, regression_length + 1});
+        xt::xarray<uint16_t> quantized_boxes = xt::reshape_view(output_boxes, {num_proposals, 4, regression_length + 1});
 
         auto shape = {quantized_boxes.shape(1), quantized_boxes.shape(2)};
 
@@ -220,10 +220,10 @@ std::vector<Decodings> decode_boxes_and_keypoints(std::vector<HailoTensorPtr> ra
         float32_t qp_scale_kpts = raw_keypoints[i]->vstream_info().quant_info.qp_scale;
         float32_t qp_zp_kpts = raw_keypoints[i]->vstream_info().quant_info.qp_zp;
 
-        auto output_keypoints = common::get_xtensor(raw_keypoints[i]);
+        auto output_keypoints = common::get_xtensor_uint16(raw_keypoints[i]);
         int num_proposals_keypoints = output_keypoints.shape(0) * output_keypoints.shape(1);
         auto output_keypoints_quantized = xt::view(output_keypoints, xt::all(), xt::all(), xt::all());
-        xt::xarray<uint8_t> quantized_keypoints = xt::reshape_view(output_keypoints_quantized, {num_proposals_keypoints, 17, 3});
+        xt::xarray<uint16_t> quantized_keypoints = xt::reshape_view(output_keypoints_quantized, {num_proposals_keypoints, 17, 3});
 
         auto keypoints_shape = {quantized_keypoints.shape(1), quantized_keypoints.shape(2)};
 
