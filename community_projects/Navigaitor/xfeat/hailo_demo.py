@@ -183,6 +183,46 @@ class MatchingDemo:
         
         return top_frame_canvas
 
+    def get_area_mid(self, points):
+        X = 0
+        Y = 1
+        top_left = 0
+        top_right = 1
+        bottom_right = 2
+        bottom_left = 3
+
+        height = points[bottom_right][Y] - points[top_right][Y]
+        width = points[top_right][X] - points[top_left][X]
+        area = height * width
+
+        midx = points[top_left][X] + (width / 2)
+        midy = points[top_left][X] + (height / 2)
+
+        return area, midx, midy
+
+    def print_directions(self, points, ref_points):
+        area, midx, midy = self.get_area_mid(points)
+        ref_area, ref_midx, ref_midy = self.get_area_mid(ref_points)
+        midx -= self.width
+
+        area_threshold = 0.05
+        midx_threshold = 0.05
+
+        if ((1 - area_threshold) < abs(area / ref_area) < (1 + area_threshold)):
+            pass
+        elif area < ref_area:
+            print("Forward")
+        else:
+            print("Backward")
+
+        if ((1 - midx_threshold) < abs(midx / ref_midx) < (1 + midx_threshold)):
+            pass
+        elif midx < ref_midx:
+            print("Left")
+        else:
+            print("Right")
+
+
     def process(self):
         # Create a blank canvas for the top frame
         top_frame_canvas = self.create_top_frame()
@@ -191,7 +231,7 @@ class MatchingDemo:
         bottom_frame = self.match_and_draw(self.ref_frame, self.current_frame)
         # Draw warped corners
         if self.H is not None and len(self.corners) > 1:
-            print(self.warp_points(self.corners, self.H, self.width))
+            self.print_directions(self.warp_points(self.corners, self.H, self.width), self.corners)
             self.draw_quad(top_frame_canvas, self.warp_points(self.corners, self.H, self.width))
 
         # Stack top and bottom frames vertically on the final canvas
