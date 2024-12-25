@@ -173,7 +173,11 @@ def finish_run(mid_seq):
 
 
 def synthesis_task(mid):
-    return synthesizer.synthesis(MIDI.score2opus(mid))
+    pcm = synthesizer.synthesis(MIDI.score2opus(mid))
+    samples = np.empty((0, 2), dtype=np.int16)
+    for i in range(0, len(pcm), 4):
+        samples = np.concatenate([samples, np.array(struct.unpack('<hh', pcm[i:i+4]))])
+    return samples
 
 
 def render_audio(mid_seq, should_render_audio):

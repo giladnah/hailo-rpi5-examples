@@ -1,7 +1,7 @@
 from threading import Lock
 
 import fluidsynth
-import numpy as np
+import struct
 
 
 class MidiSynthesizer:
@@ -43,7 +43,7 @@ class MidiSynthesizer:
         event_list = sorted(event_list, key=lambda e: e[1])
 
         tempo = int((60 / 120) * 10 ** 6)  # default 120 bpm
-        ss = np.empty((0, 2), dtype=np.int16)
+        pcm = b""
         device = self.get_fluidsynth()
         fl, sfid = device[:-1]
         last_t = 0
@@ -55,8 +55,8 @@ class MidiSynthesizer:
             sample_len -= int(((last_t / ticks_per_beat) * tempo / (10 ** 6)) * self.sample_rate)
             last_t = event[1]
             if sample_len > 0:
-                sample = fl.get_samples(sample_len).reshape(sample_len, 2)
-                ss = np.concatenate([ss, sample])
+                samples = fl.get_samples(sample_len).reshape(sample_len, 2)
+                pcm += b''.join([struct.pack('<hh', sample[0], sample[1]) for sample in samples])
             if name == "set_tempo":
                 tempo = event[2]
             elif name == "patch_change":
@@ -73,9 +73,4 @@ class MidiSynthesizer:
                 fl.noteoff(c, p)
 
         self.release_fluidsynth(device)
-        if ss.shape[0] > 0:
-            max_val = np.abs(ss).max()
-            if max_val != 0:
-                ss = (ss / max_val) * np.iinfo(np.int16).max
-        ss = ss.astype(np.int16)
-        return ss
+        return pcm
