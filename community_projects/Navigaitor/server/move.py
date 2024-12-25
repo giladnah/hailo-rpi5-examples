@@ -3,7 +3,7 @@ from server.external import McLumk_Wheel_Sports as bot
 DEFAULT_SPEED = 5
 
 def is_known_move(move_direction_request: str) -> bool:
-    return move_direction_request in ["forward", "backward", "left", "right"]
+    return move_direction_request in ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
 
 def move(command_received: dict) -> None:
     command_received_keys = list(command_received.keys())
@@ -23,13 +23,13 @@ def move(command_received: dict) -> None:
         return
 
     bot.stop_robot()
-    if pressed_key == "forward":
+    if pressed_key == "ArrowUp":
         bot.move_forward(DEFAULT_SPEED)
     
-    elif pressed_key == "backward":
+    elif pressed_key == "ArrowDown":
         bot.move_backward(DEFAULT_SPEED)
 
-    elif pressed_key == "left":
+    elif pressed_key == "ArrowLeft":
         bot.rotate_left(DEFAULT_SPEED)
 
     else:

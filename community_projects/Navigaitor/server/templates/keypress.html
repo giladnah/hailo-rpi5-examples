@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Key Press and Release Listener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #keyPressDisplay {
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 20px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Press or Release Any Key</h1>
+    <p>Press or release any key on your keyboard to see it displayed below.</p>
+
+    <div id="keyPressDisplay">Waiting for key event...</div>
+
+    <script>
+        // Establish WebSocket connection to the FastAPI WebSocket endpoint
+        const socket = new WebSocket("ws://192.168.200.194:8000/move");
+
+        // Handle WebSocket messages from the server
+        socket.onmessage = function(event) {
+            const keyDisplay = document.getElementById("keyPressDisplay");
+            keyDisplay.innerHTML = `Server response: <strong>${event.data}</strong>`;
+        };
+
+        // Handle WebSocket errors
+        socket.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+        };
+	
+	document.addEventListener('keydown', (e) => {
+		if (e.repeat) return;
+		socket.send(`{"pressed" : "${event.key}"}`);
+	});
+
+	document.addEventListener('keyup', (e) => {
+                if (e.repeat) return;
+                socket.send(`{"released" : "${event.key}"}`);
+        });
+
+    </script>
+
+</body>
+</html>
+
