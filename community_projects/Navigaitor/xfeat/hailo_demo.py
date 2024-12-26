@@ -31,6 +31,8 @@ def argparser():
     parser.add_argument('--cam', type=int, default=0, help='Webcam device number.')
     parser.add_argument('--video', type=str, default="", help='video path.')
     parser.add_argument('--inference_type', type=str, default='hailo', help='"hailo" or torch or onnx')
+    parser.add_argument('--record', action="store_true")
+    parser.add_argument('--retreat', action="store_true")
     return parser.parse_args()
 
 
@@ -569,6 +571,11 @@ class MatchingDemo:
         mclumk.stop_robot()
 
 if __name__ == "__main__":
+
     mclumk.stop_robot()
-    demo = MatchingDemo(args = argparser())
-    demo.main_loop()
+    args = argparser()
+    demo = MatchingDemo(args)
+    if args.record:
+        demo.start_recording()
+    elif args.retreat:
+        demo.start_playback()
