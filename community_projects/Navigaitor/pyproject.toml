@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "navigaitor"
+version = "0.1.0"
+description = ""
+authors = ["Navigaitor Team <navigaitor@hailo.ai>"]
+readme = "README.md"
+
+packages = [
+  { include = "server" } 
+]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+smbus = "^1.1.post2"
+fastapi = "^0.115.6"
+uvicorn = "^0.34.0"
+websockets = "^14.1"
+torch = "^2.5.1"
+opencv-python = "^4.10.0.84"
+onnxruntime = "^1.20.1"
+tdqm = "^0.0.1"
+
+[tool.poetry.scripts]
+server = "server.main:start"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
