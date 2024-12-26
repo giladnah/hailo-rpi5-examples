@@ -8,9 +8,7 @@
 - Hailo-8™ AI Processor
 - Camera module compatible with Raspberry Pi
 - Python 3.7 or higher
-- OpenCV
 - TensorFlow
-- Hailo TAPPAS SDK
 - Internet connection for downloading models and updates
 
 
