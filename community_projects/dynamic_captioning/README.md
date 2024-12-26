@@ -16,6 +16,10 @@
 - Download the netwrok files (hef files):
     [https://drive.google.com/file/d/1LwLOrzULS-vFsSL0t594If9X2u8ti9Uy/view?usp=sharing](https://drive.google.com/file/d/1mSsYDghBCSIuLYJRrWTW8p1HavO7UPWW/view?usp=sharing)
 
+- Install espeak:
+  ```bash
+  sudo apt-get install espeak
+  ```
 - Install python packages:
     ```bash
     pip install -r requirements.txt
