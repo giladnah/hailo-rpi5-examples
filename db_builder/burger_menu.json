@@ -1,0 +1,147 @@
+{
+  "menu": [
+    {
+      "type": "burger",
+      "items": [
+        {
+          "name": "Burger",
+          "description": "Juicy beef patty on a sesame bun with optional toppings.",
+          "price": 8.99,
+          "optional_changes": [
+            "Add cheese",
+            "Add bacon",
+            "No tomatoes",
+            "No pickles",
+            "No lettuce"
+          ]
+        },
+        {
+          "name": "Vegan Burger",
+          "description": "Plant-based patty with lettuce, tomato, and vegan mayo on a whole-grain bun.",
+          "price": 7.99,
+          "optional_changes": [
+            "No mayo",
+            "No lettuce",
+            "Add avocado"
+          ]
+        },
+        {
+          "name": "BBQ Bacon Burger",
+          "description": "Beef patty with BBQ sauce, crispy bacon, and onion rings on a brioche bun.",
+          "price": 9.99,
+          "optional_changes": [
+            "No onion rings",
+            "Extra bacon",
+            "No BBQ sauce"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "appetizers",
+      "items": [
+        {
+          "name": "French Fries",
+          "description": "Crispy golden fries with a side of ketchup.",
+          "price": 3.99,
+          "optional_changes": [
+            "Add cheese",
+            "No salt",
+            "Extra crispy"
+          ]
+        },
+        {
+          "name": "Onion Rings",
+          "description": "Crispy battered onion rings served with a side of ranch.",
+          "price": 4.99,
+          "optional_changes": [
+            "No ranch",
+            "Add BBQ sauce",
+            "Extra crispy"
+          ]
+        },
+        {
+          "name": "Sweet Potato Fries",
+          "description": "Sweet and savory fries with a hint of cinnamon.",
+          "price": 4.49,
+          "optional_changes": [
+            "No cinnamon",
+            "Add honey",
+            "Extra crispy"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "drinks",
+      "items": [
+        {
+          "name": "Coca-Cola",
+          "description": "Classic refreshing soda.",
+          "price": 1.99,
+          "optional_changes": [
+            "No ice",
+            "Extra ice",
+            "Add lemon"
+          ]
+        },
+        {
+          "name": "Iced Tea",
+          "description": "Chilled black tea with a slice of lemon.",
+          "price": 2.49,
+          "optional_changes": [
+            "No lemon",
+            "Add mint",
+            "Sweetened"
+          ]
+        },
+        {
+          "name": "Orange Juice",
+          "description": "Freshly squeezed orange juice.",
+          "price": 3.49,
+          "optional_changes": [
+            "No pulp",
+            "Extra pulp",
+            "Chilled"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "dessert",
+      "items": [
+        {
+          "name": "Tiramisu",
+          "description": "Layers of coffee-soaked ladyfingers, mascarpone cream, and cocoa powder.",
+          "price": 6.99,
+          "optional_changes": [
+            "Extra cocoa powder",
+            "No alcohol",
+            "No cocoa"
+          ]
+        },
+        {
+          "name": "Cheesecake",
+          "description": "Creamy cheesecake with a graham cracker crust and fruit topping.",
+          "price": 5.99,
+          "optional_changes": [
+            "No fruit topping",
+            "Extra crust",
+            "No whipped cream"
+          ]
+        },
+        {
+          "name": "Chocolate Lava Cake",
+          "description": "Warm chocolate cake with a gooey molten center, served with vanilla ice cream.",
+          "price": 7.49,
+          "optional_changes": [
+            "Add berries",
+            "No ice cream",
+            "Extra molten center"
+          ]
+        }
+      ]
+    }
+  ]
+}
+
