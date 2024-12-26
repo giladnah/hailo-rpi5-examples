@@ -2,24 +2,9 @@ import os
 from transformers import AutoProcessor, AutoConfig
 import onnxruntime as ort
 import time
-import requests
-from PIL import Image
 import numpy as np
-from contextlib import ExitStack
 from tokenizers import Tokenizer as TokenizerFast
-from hailo_platform import (
-    HEF,
-    VDevice,
-    HailoStreamInterface,
-    ConfigureParams,
-    InferVStreams,
-    InputVStreamParams,
-    OutputVStreamParams,
-    FormatType,
-    HailoSchedulingAlgorithm
-)
-from picamzero import Camera
-import time
+from hailo_platform import VDevice, FormatType, HailoSchedulingAlgorithm
 import clip
 import torch
 from picamera2 import Picamera2
@@ -29,7 +14,6 @@ CAPTION_EMBEDDING = "embeddings/caption_embedding.npy"
 WORD_EMBEDDING = "embeddings/word_embedding.npy"
 ENCODER_PATH = "models/florence2_transformer_encoder.hef"
 DECODER_PATH = "models/florence2_transformer_decoder.hef"
-DECODER_ONNX_PATH = "models/florence2_transformer_decoder.onnx"
 VISION_ENCODER_PATH = "models/vision_encoder.onnx"
 DECODER_INPUT_SHAPE = (1, 1, 32, 768)
 ENCODER_OUTPUT_KEY = "transformer_decoder/input_layer1"
@@ -97,7 +81,6 @@ def infer_decoder(decoder, encoder_output, input_embeds):
     #print("Decoder model on h8 took %s seconds" % (end - start))
     return decoder_output
 
-
 def infer_florence2(image, processor, davit_session, encoder, decoder, tokenizer):
     inputs = processor(text='<CAPTION>', images=image, return_tensors='pt')
     image_features = infer_davit(inputs, processor, davit_session)
@@ -115,7 +98,6 @@ def infer_florence2(image, processor, davit_session, encoder, decoder, tokenizer
     generated_ids = [START_TOKEN]
     start = time.time()
     while next_token_id != START_TOKEN and token_index < 32:
-        #decoder_output = decoder_session.run(None, {'encoder_hidden_states': encoder_hidden_state, 'inputs_embeds': decoder_input[0].astype(np.float32)})[0].squeeze()
         decoder_output = infer_decoder(decoder, dataset[ENCODER_OUTPUT_KEY], dataset[DECODER_INPUT_KEY])
         res = decoder_output.squeeze()[token_index]
         next_token_id = np.argmax(res)
@@ -128,44 +110,38 @@ def infer_florence2(image, processor, davit_session, encoder, decoder, tokenizer
     #print("third model h8 took %s seconds" % (end - start))
     return res
 
-def capture_image():
-    path = "image.jpeg"
-    #os.system(f"libcamera-still -o {path}")
-    os.system(f"libcamera-vid -n --codec mjpeg -t 1000 --segment 1 -o {path} --width 4056 --height 3040 --brightness 0.0 --contrast 0.7 --exposure normal --framerate 25 --gain 0 --awb auto --metering centre --saturation 1.0 --sharpness 1.5 --denoise off")
-    return np.array(Image.open(path))
-
-    
-
-
-    # from picamera2 import Picamera2
-    # with Picamera2()as picam2:
-    #     picam2.configure(picam2.create_preview_configuration({"format": "RGB888"}))
-    #     picam2.start()
-    #     array = picam2.capture_array("main")
-    #     picam2.capture_file("test.jpg")
-    #     return array
-
-def picamera_capture_image(picam2, capture_config, preview_config):
-    picam2.switch_mode(capture_config)
-    array = picam2.capture_array("main")
-    picam2.switch_mode(preview_config)
-    return array
-
-
-def main():
-    # capture_image(); return 0
+def picam_init():
     picam2 = Picamera2()
     preview_config = picam2.create_preview_configuration(main={"size": (2464, 3280, 3)})
     capture_config = picam2.create_still_configuration(main={"size": (2464, 3280, 3), "format": "RGB888"})
     picam2.configure(preview_config)
     picam2.start(show_preview=True)
+    return picam2, preview_config, capture_config
+
+def picam_capture(picam2, capture_config, preview_config):
+    picam2.switch_mode(capture_config)
+    array = picam2.capture_array("main")
+    picam2.switch_mode(preview_config)
+    return array
+
+def caption_loop(picam2, capture_config, preview_config, processor, davit_session, encoder, decoder, tokenizer, clip_model):
+    last_caption = None
+    while True:
+        start = time.time()
+        caption = infer_florence2(picam_capture(picam2, capture_config, preview_config), processor, davit_session, encoder, decoder, tokenizer)
+        if last_caption is None or match_texts(clip_model, last_caption, caption) < COSINE_SIMILARITY_THRESHOLD:
+            print(f"NEW EVENT ALERT!!!!! - {caption}")
+            os.system(f'espeak "{caption}" -s 130')
+        end = time.time()
+        #print("took %s seconds" % (end - start))
+        last_caption = caption
+
+def main():
+    print("Initializing...")
     processor = create_processor()
     davit_session = ort.InferenceSession(VISION_ENCODER_PATH)
-    decoder_session = ort.InferenceSession(DECODER_ONNX_PATH)
     tokenizer = TokenizerFast.from_file(TOKENIZER_PATH)
     clip_model, _ = clip.load("ViT-B/32", "cpu")
-    last_caption = None
-    print("Starting...")
     params = VDevice.create_params()
     params.scheduling_algorithm = HailoSchedulingAlgorithm.ROUND_ROBIN    
     with VDevice(params) as vd:
@@ -178,15 +154,9 @@ def main():
             decoder_infer_model.input('florence2_transformer_decoder/input_layer2').set_format_type(FormatType.FLOAT32)
             decoder_infer_model.output().set_format_type(FormatType.FLOAT32)
             with decoder_infer_model.configure() as decoder:
-                while True:
-                    start = time.time()
-                    caption = infer_florence2(picamera_capture_image(picam2, capture_config, preview_config), processor, davit_session, encoder, decoder, tokenizer)
-                    if last_caption is None or match_texts(clip_model, last_caption, caption) < COSINE_SIMILARITY_THRESHOLD:
-                        print(f"NEW EVENT ALERT!!!!! - {caption}")
-                        os.system(f'espeak "{caption}" -s 130')
-                    end = time.time()
-                    #print("took %s seconds" % (end - start))
-                    last_caption = caption
+                picam2, preview_config, capture_config = picam_init()
+                print("Initialized succesfully")
+                caption_loop(picam2, capture_config, preview_config, processor, davit_session, encoder, decoder, tokenizer, clip_model)
                     
 
 if __name__=="__main__":
