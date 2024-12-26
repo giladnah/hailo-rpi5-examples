@@ -46,6 +46,8 @@ To get started with NavigAItor, follow these steps:
 
 ![Application GUI](readme_assets/gui.png)
 
+![AI Frames Match](readme_assets/frame_compare.png)
+
 ## Usage
 
 1. **Record a Path**:  
@@ -61,3 +63,7 @@ To get started with NavigAItor, follow these steps:
 - **Reverse Path Navigation**: Retrace any recorded path in the reverse direction.
 - **Start Anywhere**: Begin from any point along a recorded path.
 - **Remote Monitoring**: Stream the Raspbot’s point of view (POV) in real-time, displaying the path as it’s retraced.
+
+## Watch our cool project!
+https://drive.google.com/file/d/1TwxavvJ6AJmL3meYYoIhOH8NWmOuuthr/view?usp=sharing
+
