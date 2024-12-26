@@ -19,7 +19,7 @@ from modules.xfeat import XFeat
 
 import sys
 sys.path.append("/home/pi/navigaitor/community_projects/Navigaitor/server/external")
-# import McLumk_Wheel_Sports as mclumk
+import McLumk_Wheel_Sports as mclumk
  
 
 def argparser():
@@ -391,16 +391,16 @@ class MatchingDemo:
                     return
                 self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
             elif area < ref_area:
-                # mclumk.move_forward(speed_default)
+                mclumk.move_forward(speed_default)
                 print("Forward")
             else:
-                # mclumk.move_backward(speed_default)
+                mclumk.move_backward(speed_default)
                 print("Backward")
         elif midx < ref_midx:
-            # mclumk.rotate_left(speed_default)
+            mclumk.rotate_left(speed_default)
             print("Left")
         else:
-            # mclumk.rotate_right(speed_default)
+            mclumk.rotate_right(speed_default)
             print("Right")
 
     def process(self):
@@ -566,9 +566,9 @@ class MatchingDemo:
         self.frame_grabber.stop()
         self.cap.release()
         cv2.destroyAllWindows()
-        # mclumk.stop_robot()
+        mclumk.stop_robot()
 
 if __name__ == "__main__":
-    # mclumk.stop_robot()
+    mclumk.stop_robot()
     demo = MatchingDemo(args = argparser())
     demo.main_loop()
