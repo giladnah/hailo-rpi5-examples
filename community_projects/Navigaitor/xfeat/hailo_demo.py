@@ -10,10 +10,17 @@ import numpy as np
 import torch
 
 from time import time, sleep
+import time
 import argparse, sys
 import threading
-
+import os
+from datetime import datetime
 from modules.xfeat import XFeat
+
+import sys
+sys.path.append("/home/pi/navigaitor/community_projects/Navigaitor/server/external")
+import McLumk_Wheel_Sports as mclumk
+ 
 
 def argparser():
     parser = argparse.ArgumentParser(description="Configurations for the real-time matching demo.")
@@ -35,6 +42,16 @@ class FrameGrabber(threading.Thread):
         self.running = False
         self.width = width
         self.height = height
+        self.fps = int(self.cap.get(cv2.CAP_PROP_FPS)) or 30
+        self.fourcc = cv2.VideoWriter_fourcc(*"X264")
+        self.hls_directory = "./test"
+        self.gst_hls_pipeline = (
+            f"appsrc ! "
+            f"videoconvert ! "
+            f"x264enc tune=zerolatency bitrate=500 speed-preset=superfast ! "
+            f"mpegtsmux ! "
+            f"hlssink location={self.hls_directory}/segment_%05d.ts playlist-location={self.hls_directory}/playlist.m3u8 target-duration=5 max-files=5"
+        )
 
     def run(self):
         self.running = True
@@ -42,8 +59,11 @@ class FrameGrabber(threading.Thread):
             ret, frame = self.cap.read()
             if not ret:
                 print("Can't receive frame (stream ended?).")
+            if (frame is None) or (self.frame is None):
+                print("BADDDDD")
+            cv2.VideoWriter(self.gst_hls_pipeline, self.fourcc, self.fps, (self.width, self.height))
             self.frame = frame
-            sleep(0.01)
+            sleep(0.05)
 
     def stop(self):
         self.running = False
@@ -52,6 +72,130 @@ class FrameGrabber(threading.Thread):
     def get_last_frame(self):
         self.frame = np.resize(self.frame, (self.height, self.width, 3))
         return self.frame
+
+class ImageRecorder(threading.Thread):
+    def __init__(self, frame_grabber, storage_dir):
+        """
+        Initialize the ImageRecorder class.
+
+        Args:
+            frame_grabber (FrameGrabber): Instance of an existing FrameGrabber.
+            storage_dir (str): Directory to store recorded images.
+        """
+        super().__init__()
+        self.frame_grabber = frame_grabber
+        self.storage_dir = storage_dir
+        self.running = False
+        self.mode = "playback"  # Modes: 'record' or 'playback'
+        self.output_queue = []
+        self.current_image_index = 0
+
+        # Ensure the storage directory exists
+        os.makedirs(storage_dir, exist_ok=True)
+
+    def run(self):
+        self.running = True
+        while self.running:
+            if self.mode == "record":
+                self.record_images()
+            elif self.mode == "playback":
+                time.sleep(0.1)  # Sleep to avoid busy looping in playback mode
+
+    def stop(self):
+        """
+        Stop the thread and release resources.
+        """
+        self.running = False
+
+    def switch_to_record(self):
+        """
+        Switch to recording mode.
+        """
+        self.mode = "record"
+
+    def switch_to_playback(self):
+        """
+        Switch to playback mode and reset the playback index.
+        """
+        self.mode = "playback"
+        self.current_image_index = 0
+
+    def record_images(self):
+        """
+        Continuously capture and save images every 0.5 seconds in sequential order using the frame grabber.
+        """
+        while self.mode == "record" and self.running:
+            frame = self.frame_grabber.get_last_frame()
+
+            if frame is not None:
+                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S%f")
+                filename = os.path.join(self.storage_dir, f"image_{timestamp}.png")
+                cv2.imwrite(filename, frame)
+                print(f"Image saved: {filename}")
+                time.sleep(0.3)
+            else:
+                print("No frame available from frame grabber.")
+
+    def get_next_image(self):
+        """
+        Get the next image in playback mode.
+
+        Returns:
+            frame (numpy array): The next image frame, or None if no more images are available.
+        """
+        if self.mode == "playback":
+            image_files = sorted(os.listdir(self.storage_dir))
+            print(len(image_files),"images found")
+            if self.current_image_index < len(image_files):
+                image_file = image_files[self.current_image_index]
+                image_path = os.path.join(self.storage_dir, image_file)
+                frame = cv2.imread(image_path)
+                if frame is not None:
+                    self.current_image_index += 1
+                    print(f"Sent image: {image_path}")
+                    return frame
+                else:
+                    print(f"Failed to load image: {image_path}")
+            else:
+                print("No more images to display.")
+        return None
+
+    def get_previous_image(self):
+        """
+        Get the previous image in playback mode.
+
+        Returns:
+            frame (numpy array): The previous image frame, or None if no more images are available.
+        """
+        if self.mode == "playback":
+            image_files = sorted(os.listdir(self.storage_dir))
+            if self.current_image_index > 0:
+                self.current_image_index -= 1
+                image_file = image_files[self.current_image_index]
+                image_path = os.path.join(self.storage_dir, image_file)
+                frame = cv2.imread(image_path)
+                if frame is not None:
+                    print(f"Sent image: {image_file}")
+                    return frame
+                else:
+                    print(f"Failed to load image: {image_path}")
+            else:
+                print("Already at the first image.")
+        return None
+
+    def clean_images(self):
+        """
+        Remove all images from the storage directory.
+        """
+        image_files = os.listdir(self.storage_dir)
+        for image_file in image_files:
+            file_path = os.path.join(self.storage_dir, image_file)
+            try:
+                os.remove(file_path)
+                print(f"Deleted image: {file_path}")
+            except Exception as e:
+                print(f"Failed to delete {file_path}: {e}")
+
 
 class CVWrapper():
     def __init__(self, mtd):
@@ -96,9 +240,15 @@ class MatchingDemo:
         self.frame_grabber = FrameGrabber(self.cap, self.width, self.height)
         self.frame_grabber.start()
 
+        #recorder
+        self.recorder = ImageRecorder(frame_grabber=self.frame_grabber, storage_dir="recorded_images")
+        self.recorder.start()
+
         #Homography params
         self.min_inliers = 50
         self.ransac_thr = 4.0
+
+        self.win = False
 
         #FPS check
         self.FPS = 0
@@ -206,28 +356,37 @@ class MatchingDemo:
         midx -= self.width
 
         area_threshold = 0.05
-        midx_threshold = 0.05
-
-        if ((1 - area_threshold) < abs(area / ref_area) < (1 + area_threshold)):
-            pass
-        elif area < ref_area:
-            print("Forward")
-        else:
-            print("Backward")
+        midx_threshold = 0.15
+        speed_default = 5
 
         if ((1 - midx_threshold) < abs(midx / ref_midx) < (1 + midx_threshold)):
-            pass
+            if ((1 - area_threshold) < abs(area / ref_area) < (1 + area_threshold)):
+                # Robot is in the right spot, next image
+                self.ref_frame = self.recorder.get_next_image()
+                if self.ref_frame is None:
+                    print("Reached destination")
+                    self.win = True
+                    return
+                self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
+            elif area < ref_area:
+                mclumk.move_forward(speed_default)
+                print("Forward")
+            else:
+                mclumk.move_backward(speed_default)
+                print("Backward")
         elif midx < ref_midx:
+            mclumk.rotate_left(speed_default)
             print("Left")
         else:
+            mclumk.rotate_right(speed_default)
             print("Right")
-
 
     def process(self):
         # Create a blank canvas for the top frame
         top_frame_canvas = self.create_top_frame()
 
         # Match features and draw matches on the bottom frame
+        i = 0
         bottom_frame = self.match_and_draw(self.ref_frame, self.current_frame)
         # Draw warped corners
         if self.H is not None and len(self.corners) > 1:
@@ -240,7 +399,8 @@ class MatchingDemo:
         cv2.imshow(self.window_name, canvas)
 
     def match_and_draw(self, ref_frame, current_frame):
-
+        bad_frame = False
+        bad_threshold = 60
         matches, good_matches = [], []
         kp1, kp2 = [], []
         points1, points2 = [], []
@@ -262,19 +422,19 @@ class MatchingDemo:
             points1 = kpts1[idx0].cpu().numpy()
             points2 = kpts2[idx1].cpu().numpy()
 
-        if len(kp1) > 10 and len(kp2) > 10 and self.args.method in ['SIFT', 'ORB']:
-            # Match descriptors
-            matches = self.method.matcher.match(des1, des2)
+        # if len(kp1) > 10 and len(kp2) > 10 and self.args.method in ['SIFT', 'ORB']:
+        #     # Match descriptors
+        #     matches = self.method.matcher.match(des1, des2)
 
-            if len(matches) > 10:
-                points1 = np.zeros((len(matches), 2), dtype=np.float32)
-                points2 = np.zeros((len(matches), 2), dtype=np.float32)
+        #     if len(matches) > 10:
+        #         points1 = np.zeros((len(matches), 2), dtype=np.float32)
+        #         points2 = np.zeros((len(matches), 2), dtype=np.float32)
 
-                for i, match in enumerate(matches):
-                    points1[i, :] = kp1[match.queryIdx].pt
-                    points2[i, :] = kp2[match.trainIdx].pt
+        #         for i, match in enumerate(matches):
+        #             points1[i, :] = kp1[match.queryIdx].pt
+        #             points2[i, :] = kp2[match.trainIdx].pt
 
-        if len(points1) > 10 and len(points2) > 10:
+        if len(points1) > bad_threshold and len(points2) > bad_threshold:
             # Find homography
             self.H, inliers = cv2.findHomography(points1, points2, cv2.USAC_MAGSAC, self.ransac_thr, maxIters=700, confidence=0.995)
             inliers = inliers.flatten() > 0
@@ -296,6 +456,7 @@ class MatchingDemo:
             
         else:
             matched_frame = np.hstack([ref_frame, current_frame])
+            bad_frame = True
 
         color = (240, 89, 169)
 
@@ -310,42 +471,81 @@ class MatchingDemo:
         self.putText(canvas=matched_frame, text="FPS (registration): {:.1f}".format(self.FPS), org=(self.width+10, 30), fontFace=self.font, 
             fontScale=self.font_scale, textColor=(0,0,0), borderColor=color, thickness=1, lineType=self.line_type)
 
+        if bad_frame:
+            return None
         return matched_frame
+    
+    """main API functions: start_playback, start_recording, stop recording"""
+    def start_playback(self):
+        self.recorder.switch_to_playback()
+        self.ref_frame = self.recorder.get_next_image()
+        self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
 
-    def main_loop(self):
-        self.current_frame = self.frame_grabber.get_last_frame()
-        self.ref_frame = self.current_frame.copy()
-        self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None) #Cache ref features
-
-        while True:
-            if self.current_frame is None:
-                break
-
-            t0 = time()
-            self.process()
-
-            key = cv2.waitKey(1)
-            if key == ord('q'):
-                break
-            elif key == ord('s'):
-                self.ref_frame = self.current_frame.copy()  # Update reference frame
-                self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None) #Cache ref features
-
+        while not self.win:
             self.current_frame = self.frame_grabber.get_last_frame()
+            if self.current_frame is None:
+                print("frame is none, bye")
+                break
 
-            #Measure avg. FPS
-            self.time_list.append(time()-t0)
-            if len(self.time_list) > self.max_cnt:
-                self.time_list.pop(0)
-            self.FPS = 1.0 / np.array(self.time_list).mean()
+            self.process()
+            
+        self.cleanup()
+
+    def start_recording(self):
+        self.recorder.switch_to_record()
+        
+    def stop_recording(self):
+        self.recorder.switch_to_playback()
+
+        
+    def main_loop(self):
+        self.start_recording()
+        # self.current_frame = self.frame_grabber.get_last_frame()
+        # # self.ref_frame = self.current_frame.copy()
+        # # self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None) #Cache ref features
+
+        # self.ref_frame = self.recorder.get_next_image()
+        # self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
+
+        # #record for 5 seconds
+        sleep(10)
+        self.stop_recording()
+        print("STOPPED RECORDING, MOVING TO PLAYBACK")
+        sleep(5)
+        self.start_playback()
+
+        # while True:
+        #     if self.current_frame is None:
+        #         break
+
+        #     t0 = time.time()
+        #     self.process()
+
+        #     key = cv2.waitKey(1)
+        #     if key == ord('q'):
+        #         break
+        #     # elif key == ord('s'):
+        #     #     self.ref_frame = self.current_frame.copy()  # Update reference frame
+        #     #     self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None) #Cache ref features
+
+        #     self.current_frame = self.frame_grabber.get_last_frame()
+
+        #     #Measure avg. FPS
+        #     self.time_list.append(time.time()-t0)
+        #     if len(self.time_list) > self.max_cnt:
+        #         self.time_list.pop(0)
+        #     self.FPS = 1.0 / np.array(self.time_list).mean()
         
         self.cleanup()
 
     def cleanup(self):
+        self.recorder.stop()
         self.frame_grabber.stop()
         self.cap.release()
         cv2.destroyAllWindows()
+        mclumk.stop_robot()
 
 if __name__ == "__main__":
+    mclumk.stop_robot()
     demo = MatchingDemo(args = argparser())
     demo.main_loop()
