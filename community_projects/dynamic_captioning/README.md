@@ -15,6 +15,8 @@
 
 
 ## Installation
+- Download the netwrok files (hef files):
+    https://drive.google.com/file/d/1LwLOrzULS-vFsSL0t594If9X2u8ti9Uy/view?usp=sharing
 
 - Install python packages:
     ```bash
