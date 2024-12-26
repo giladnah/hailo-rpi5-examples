@@ -19,7 +19,7 @@ from modules.xfeat import XFeat
 
 import sys
 sys.path.append("/home/pi/navigaitor/community_projects/Navigaitor/server/external")
-import McLumk_Wheel_Sports as mclumk
+# import McLumk_Wheel_Sports as mclumk
  
 
 def argparser():
@@ -87,8 +87,11 @@ class ImageRecorder(threading.Thread):
         self.storage_dir = storage_dir
         self.running = False
         self.mode = "playback"  # Modes: 'record' or 'playback'
+        self.dir = "forward" #Dirs: 'forward' or 'reverse'
         self.output_queue = []
         self.current_image_index = 0
+        self.total_images = 0
+        self.image_files = None
 
         # Ensure the storage directory exists
         os.makedirs(storage_dir, exist_ok=True)
@@ -118,7 +121,12 @@ class ImageRecorder(threading.Thread):
         Switch to playback mode and reset the playback index.
         """
         self.mode = "playback"
-        self.current_image_index = 0
+        self.image_files = sorted(os.listdir(self.storage_dir))
+        print(len(self.image_files),"images found")
+        if (self.dir == "reverse"):
+            self.current_image_index = len(self.image_files)    
+        else:
+            self.current_image_index = 0
 
     def record_images(self):
         """
@@ -144,10 +152,10 @@ class ImageRecorder(threading.Thread):
             frame (numpy array): The next image frame, or None if no more images are available.
         """
         if self.mode == "playback":
-            image_files = sorted(os.listdir(self.storage_dir))
-            print(len(image_files),"images found")
-            if self.current_image_index < len(image_files):
-                image_file = image_files[self.current_image_index]
+            # image_files = sorted(os.listdir(self.storage_dir))
+            # print(len(image_files),"images found")
+            if self.current_image_index < len(self.image_files):
+                image_file = self.image_files[self.current_image_index]
                 image_path = os.path.join(self.storage_dir, image_file)
                 frame = cv2.imread(image_path)
                 if frame is not None:
@@ -168,10 +176,10 @@ class ImageRecorder(threading.Thread):
             frame (numpy array): The previous image frame, or None if no more images are available.
         """
         if self.mode == "playback":
-            image_files = sorted(os.listdir(self.storage_dir))
+            # image_files = sorted(os.listdir(self.storage_dir))
             if self.current_image_index > 0:
                 self.current_image_index -= 1
-                image_file = image_files[self.current_image_index]
+                image_file = self.image_files[self.current_image_index]
                 image_path = os.path.join(self.storage_dir, image_file)
                 frame = cv2.imread(image_path)
                 if frame is not None:
@@ -195,7 +203,20 @@ class ImageRecorder(threading.Thread):
                 print(f"Deleted image: {file_path}")
             except Exception as e:
                 print(f"Failed to delete {file_path}: {e}")
-
+    
+    def get_next_image_by_dir(self):
+        if (self.dir == "reverse"):
+            return self.get_previous_image()
+        else: #forward is default
+            return self.get_next_image()
+        
+    def set_dir(self,dir):
+        if (dir in ["forward","reverse"]):
+            self.dir = dir
+        else:
+            self.dir = "forward"
+            print("illegal dir!")
+        print("dir set ", self.dir)
 
 class CVWrapper():
     def __init__(self, mtd):
@@ -362,23 +383,24 @@ class MatchingDemo:
         if ((1 - midx_threshold) < abs(midx / ref_midx) < (1 + midx_threshold)):
             if ((1 - area_threshold) < abs(area / ref_area) < (1 + area_threshold)):
                 # Robot is in the right spot, next image
-                self.ref_frame = self.recorder.get_next_image()
+                self.ref_frame = self.recorder.get_next_image_by_dir()
+                    
                 if self.ref_frame is None:
                     print("Reached destination")
                     self.win = True
                     return
                 self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
             elif area < ref_area:
-                mclumk.move_forward(speed_default)
+                # mclumk.move_forward(speed_default)
                 print("Forward")
             else:
-                mclumk.move_backward(speed_default)
+                # mclumk.move_backward(speed_default)
                 print("Backward")
         elif midx < ref_midx:
-            mclumk.rotate_left(speed_default)
+            # mclumk.rotate_left(speed_default)
             print("Left")
         else:
-            mclumk.rotate_right(speed_default)
+            # mclumk.rotate_right(speed_default)
             print("Right")
 
     def process(self):
@@ -476,9 +498,11 @@ class MatchingDemo:
         return matched_frame
     
     """main API functions: start_playback, start_recording, stop recording"""
-    def start_playback(self):
+    def start_playback(self,dir = "forward"):
+        self.recorder.set_dir(dir)
         self.recorder.switch_to_playback()
-        self.ref_frame = self.recorder.get_next_image()
+        self.ref_frame = self.recorder.get_next_image_by_dir()
+
         self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
 
         while not self.win:
@@ -496,10 +520,8 @@ class MatchingDemo:
         
     def stop_recording(self):
         self.recorder.switch_to_playback()
-
         
     def main_loop(self):
-        self.start_recording()
         # self.current_frame = self.frame_grabber.get_last_frame()
         # # self.ref_frame = self.current_frame.copy()
         # # self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None) #Cache ref features
@@ -508,11 +530,12 @@ class MatchingDemo:
         # self.ref_precomp = self.method.descriptor.detectAndCompute(self.ref_frame, None)
 
         # #record for 5 seconds
+        self.start_recording()
         sleep(10)
         self.stop_recording()
         print("STOPPED RECORDING, MOVING TO PLAYBACK")
         sleep(5)
-        self.start_playback()
+        self.start_playback("forward") #reverse
 
         # while True:
         #     if self.current_frame is None:
@@ -543,9 +566,9 @@ class MatchingDemo:
         self.frame_grabber.stop()
         self.cap.release()
         cv2.destroyAllWindows()
-        mclumk.stop_robot()
+        # mclumk.stop_robot()
 
 if __name__ == "__main__":
-    mclumk.stop_robot()
+    # mclumk.stop_robot()
     demo = MatchingDemo(args = argparser())
     demo.main_loop()
