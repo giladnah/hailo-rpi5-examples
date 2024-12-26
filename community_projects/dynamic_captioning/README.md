@@ -1,6 +1,6 @@
 # Dynamic Captioning
 
-## Dinamically describe changing in scene, running on Raspberry pi 5 AI kit (powered by Hailo)
+## Dinamically generate captions of a scene, only when a change in scene occurs. running on Raspberry pi 5 AI kit (powered by Hailo)
 
 ## Requirements
 
