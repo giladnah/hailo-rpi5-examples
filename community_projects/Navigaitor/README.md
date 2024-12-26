@@ -41,25 +41,21 @@ The neural network combines interest point detection and descriptor extraction i
 The robot will capture this route, an image per X, creating the foundation for seamless, automatic navigation in the future.
 Once the path is set, it's that simple – just place the robot at any point along the route. With a single button press, the robot will effortlessly move forward, backward, stop, and return along the path as needed – smart, precise, and completely hands-free. -->
 
-**Motivation.** 
+<!-- **Motivation.**  -->
 
 **Capabilities.**
-- Real-time sparse inference on CPU for VGA images (tested on laptop with an i5 CPU and vanilla pytorch);
-- Simple architecture components which facilitates deployment on embedded devices (jetson, raspberry pi, hailo 8, etc..);
-- Supports both sparse and semi-dense matching of local features;
-- Compact descriptors (64D);
-- Performance comparable to known deep local features such as SuperPoint while being significantly faster and more lightweight. Also, XFeat exhibits much better robustness to viewpoint and illumination changes than classic local features as ORB and SIFT;
-- Supports batched inference if you want ridiculously fast feature extraction. On VGA sparse setting, we achieved about 1,400 FPS using an RTX 4090.
-- For single batch inference on GPU (VGA), one can easily achieve over 150 FPS while leaving lots of room on the GPU for other concurrent tasks.
+- Remote control of Raspbot motion from web server GUI
+- Taking snapshots along drive path
+- Retreat recorder path without manual control using AI based on the camera as the only input
 
 ##
 
-**Paper Abstract.** We introduce a lightweight and accurate architecture for resource-efficient visual correspondence. Our method, dubbed XFeat (Accelerated Features), revisits fundamental design choices in convolutional neural networks for detecting, extracting, and matching local features. Our new model satisfies a critical need for fast and robust algorithms suitable to resource-limited devices. In particular, accurate image matching requires sufficiently large image resolutions -- for this reason, we keep the resolution as large as possible while limiting the number of channels in the network. Besides, our model is designed to offer the choice of matching at the sparse or semi-dense levels, each of which may be more suitable for different downstream applications, such as visual navigation and augmented reality. Our model is the first to offer semi-dense matching efficiently, leveraging a novel match refinement module that relies on coarse local descriptors. XFeat is versatile and hardware-independent, surpassing current deep learning-based local features in speed (up to 5x faster) with comparable or better accuracy, proven in pose estimation and visual localization. We showcase it running in real-time on an inexpensive laptop CPU without specialized hardware optimizations.
+<!-- **Paper Abstract.** We introduce a lightweight and accurate architecture for resource-efficient visual correspondence. Our method, dubbed XFeat (Accelerated Features), revisits fundamental design choices in convolutional neural networks for detecting, extracting, and matching local features. Our new model satisfies a critical need for fast and robust algorithms suitable to resource-limited devices. In particular, accurate image matching requires sufficiently large image resolutions -- for this reason, we keep the resolution as large as possible while limiting the number of channels in the network. Besides, our model is designed to offer the choice of matching at the sparse or semi-dense levels, each of which may be more suitable for different downstream applications, such as visual navigation and augmented reality. Our model is the first to offer semi-dense matching efficiently, leveraging a novel match refinement module that relies on coarse local descriptors. XFeat is versatile and hardware-independent, surpassing current deep learning-based local features in speed (up to 5x faster) with comparable or better accuracy, proven in pose estimation and visual localization. We showcase it running in real-time on an inexpensive laptop CPU without specialized hardware optimizations.
 
 **Overview of XFeat's achitecture.**
 XFeat extracts a keypoint heatmap $\mathbf{K}$, a compact 64-D dense descriptor map $\mathbf{F}$, and a reliability heatmap $\mathbf{R}$. It achieves unparalleled speed via early downsampling and shallow convolutions, followed by deeper convolutions in later encoders for robustness. Contrary to typical methods, it separates keypoint detection into a distinct branch, using $1 \times 1$ convolutions on an $8 \times 8$ tensor-block-transformed image for fast processing, being one of the few current learned methods that decouples detection & description and can be processed independently.
 
-<img align="center" src="./figs/xfeat_arq.png" width=1000 />
+<img align="center" src="./figs/xfeat_arq.png" width=1000 /> -->
 
 ## Installation
 <!-- XFeat has minimal dependencies, only relying on torch. Also, XFeat does not need a GPU for real-time sparse inference (vanilla pytorch w/o any special optimization), unless you run it on high-res images. If you want to run the real-time matching demo, you will also need OpenCV.
@@ -90,4 +86,13 @@ use the web GUI to control the Raspbot:
 2. stop recording
 3. move the robot back to starting point using the navigation buttons
 4. start retreat mode and watch the robot repeats the track!
+
+**Upcoming feratures**
+- store multiple locations of interest and the path between them
+- retreat a chosen recorded path out of the recorded library
+- retreat in reverse direction
+- start in any point along the path
+- remote display of Raspbot's POV as well as recorded path on realtime
+
+
 
