@@ -10,6 +10,9 @@ By capturing images and creating a video-based map, NavigAItor constructs a "pat
 - **Snapshot Capture**: Automatically take snapshots along the drive path for documentation.
 - **AI-Powered Path Repetition**: Allow the robot to retrace its recorded path using only camera input, with no manual control.
 
+## Watch our cool project!
+https://drive.google.com/file/d/1TwxavvJ6AJmL3meYYoIhOH8NWmOuuthr/view?usp=sharing
+
 ## Installation
 
 To get started with NavigAItor, follow these steps:
@@ -64,6 +67,4 @@ To get started with NavigAItor, follow these steps:
 - **Start Anywhere**: Begin from any point along a recorded path.
 - **Remote Monitoring**: Stream the Raspbot’s point of view (POV) in real-time, displaying the path as it’s retraced.
 
-## Watch our cool project!
-https://drive.google.com/file/d/1TwxavvJ6AJmL3meYYoIhOH8NWmOuuthr/view?usp=sharing
 
